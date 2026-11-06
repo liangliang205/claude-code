@@ -168,8 +168,8 @@ def permission_mode_problem(step: dict, exempt: bool, inherited_env: dict) -> st
         text = settings_text(value)
         if text is None:
             return (
-                f"{where} names a file outside the repository, which this check cannot read. "
-                "Use inline settings or a file inside the repository"
+                f"{where} names a file this check cannot read (outside the repository, or "
+                "generated at runtime). Use inline settings or a file inside the repository"
             )
         if "defaultMode" in text:
             return f"remove 'defaultMode' from {where}: settings must not set a permission mode"
@@ -212,7 +212,8 @@ def predates_auto_mode(model: str) -> bool:
 def settings_text(value) -> str | None:
     """The settings JSON a 'settings' value stands for: the value itself, or the contents of
     the file it names when it is a path inside the repository. None when it names a path
-    outside the repository."""
+    outside the repository, or a file that is not present at check time (such as one an
+    earlier step generates at runtime)."""
     text = str(value or "").strip()
     if not text or text.startswith("{"):
         return text
@@ -225,7 +226,10 @@ def settings_text(value) -> str | None:
         return None
     if resolved.is_file():
         return resolved.read_text(encoding="utf-8", errors="replace")
-    return text
+    # An in-repository path with no file at check time is a settings file an earlier
+    # step writes at runtime. Its contents are unknowable here, so treat it as
+    # unreadable instead of handing the path back as if it were settings JSON.
+    return None
 
 
 def check_job(file_name: str, job_id: str, job: dict, workflow_env: dict) -> list[str]:

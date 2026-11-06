@@ -46,6 +46,10 @@ _VALIDATION_RULES = [
 
 
 def _validate_command(command: str) -> list[str]:
+    # Bash ignores leading blanks before a command name, so they must not change
+    # whether the example's rules fire. Keep this bounded: the example is not a
+    # general shell parser.
+    command = command.lstrip(" \t")
     issues = []
     for pattern, message in _VALIDATION_RULES:
         if re.search(pattern, command):
